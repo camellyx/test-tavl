@@ -40,7 +40,7 @@ tavl_create (tavl_comparison_func *compare, void *param,
   if (allocator == NULL)
     allocator = &tavl_allocator_default;
 
-  tree = allocator->libavl_malloc (allocator, sizeof *tree);
+  tree = (tavl_table*)allocator->libavl_malloc (allocator, sizeof *tree);
   if (tree == NULL)
     return NULL;
 
@@ -124,7 +124,7 @@ tavl_probe (struct tavl_table *tree, void *item)
       dir = 0;
     }
 
-  n = tree->tavl_alloc->libavl_malloc (tree->tavl_alloc, sizeof *n);
+  n = (tavl_node*)tree->tavl_alloc->libavl_malloc (tree->tavl_alloc, sizeof *n);
   if (n == NULL)
     return NULL;
 
@@ -767,13 +767,13 @@ tavl_t_cur (struct tavl_traverser *trav)
    |trav| must not have the null item selected.
    The new item must not upset the ordering of the tree. */
 void *
-tavl_t_replace (struct tavl_traverser *trav, void *new)
+tavl_t_replace (struct tavl_traverser *trav, void *new1)
 {
   void *old;
 
-  assert (trav != NULL && trav->tavl_node != NULL && new != NULL);
+  assert (trav != NULL && trav->tavl_node != NULL && new1 != NULL);
   old = trav->tavl_node->tavl_data;
-  trav->tavl_node->tavl_data = new;
+  trav->tavl_node->tavl_data = new1;
   return old;
 }
 
@@ -788,25 +788,25 @@ copy_node (struct tavl_table *tree,
            struct tavl_node *dst, int dir,
            const struct tavl_node *src, tavl_copy_func *copy)
 {
-  struct tavl_node *new =
-    tree->tavl_alloc->libavl_malloc (tree->tavl_alloc, sizeof *new);
-  if (new == NULL)
+  struct tavl_node *new1 =
+    (tavl_node*)tree->tavl_alloc->libavl_malloc (tree->tavl_alloc, sizeof *new1);
+  if (new1 == NULL)
     return 0;
 
-  new->tavl_link[dir] = dst->tavl_link[dir];
-  new->tavl_tag[dir] = TAVL_THREAD;
-  new->tavl_link[!dir] = dst;
-  new->tavl_tag[!dir] = TAVL_THREAD;
-  dst->tavl_link[dir] = new;
+  new1->tavl_link[dir] = dst->tavl_link[dir];
+  new1->tavl_tag[dir] = TAVL_THREAD;
+  new1->tavl_link[!dir] = dst;
+  new1->tavl_tag[!dir] = TAVL_THREAD;
+  dst->tavl_link[dir] = new1;
   dst->tavl_tag[dir] = TAVL_CHILD;
 
-  new->tavl_balance = src->tavl_balance;
+  new1->tavl_balance = src->tavl_balance;
   if (copy == NULL)
-    new->tavl_data = src->tavl_data;
+    new1->tavl_data = src->tavl_data;
   else
     {
-      new->tavl_data = copy (src->tavl_data, tree->tavl_param);
-      if (new->tavl_data == NULL)
+      new1->tavl_data = copy (src->tavl_data, tree->tavl_param);
+      if (new1->tavl_data == NULL)
         return 0;
     }
 
@@ -818,16 +818,16 @@ copy_node (struct tavl_table *tree,
    not yet been initialized. */
 static void
 copy_error_recovery (struct tavl_node *p,
-                     struct tavl_table *new, tavl_item_func *destroy)
+                     struct tavl_table *new1, tavl_item_func *destroy)
 {
-  new->tavl_root = p;
+  new1->tavl_root = p;
   if (p != NULL)
     {
       while (p->tavl_tag[1] == TAVL_CHILD)
         p = p->tavl_link[1];
       p->tavl_link[1] = NULL;
     }
-  tavl_destroy (new, destroy);
+  tavl_destroy (new1, destroy);
 }
 
 /* Copies |org| to a newly created tree, which is returned.
@@ -843,21 +843,21 @@ struct tavl_table *
 tavl_copy (const struct tavl_table *org, tavl_copy_func *copy,
           tavl_item_func *destroy, struct libavl_allocator *allocator)
 {
-  struct tavl_table *new;
+  struct tavl_table *new1;
 
   const struct tavl_node *p;
   struct tavl_node *q;
   struct tavl_node rp, rq;
 
   assert (org != NULL);
-  new = tavl_create (org->tavl_compare, org->tavl_param,
+  new1 = tavl_create (org->tavl_compare, org->tavl_param,
                      allocator != NULL ? allocator : org->tavl_alloc);
-  if (new == NULL)
+  if (new1 == NULL)
     return NULL;
 
-  new->tavl_count = org->tavl_count;
-  if (new->tavl_count == 0)
-    return new;
+  new1->tavl_count = org->tavl_count;
+  if (new1->tavl_count == 0)
+    return new1;
 
   p = &rp;
   rp.tavl_link[0] = org->tavl_root;
@@ -871,9 +871,9 @@ tavl_copy (const struct tavl_table *org, tavl_copy_func *copy,
     {
       if (p->tavl_tag[0] == TAVL_CHILD)
         {
-          if (!copy_node (new, q, 0, p->tavl_link[0], copy))
+          if (!copy_node (new1, q, 0, p->tavl_link[0], copy))
             {
-              copy_error_recovery (rq.tavl_link[0], new, destroy);
+              copy_error_recovery (rq.tavl_link[0], new1, destroy);
               return NULL;
             }
 
@@ -888,8 +888,8 @@ tavl_copy (const struct tavl_table *org, tavl_copy_func *copy,
               if (p == NULL)
                 {
                   q->tavl_link[1] = NULL;
-                  new->tavl_root = rq.tavl_link[0];
-                  return new;
+                  new1->tavl_root = rq.tavl_link[0];
+                  return new1;
                 }
 
               q = q->tavl_link[1];
@@ -900,9 +900,9 @@ tavl_copy (const struct tavl_table *org, tavl_copy_func *copy,
         }
 
       if (p->tavl_tag[1] == TAVL_CHILD)
-        if (!copy_node (new, q, 1, p->tavl_link[1], copy))
+        if (!copy_node (new1, q, 1, p->tavl_link[1], copy))
           {
-            copy_error_recovery (rq.tavl_link[0], new, destroy);
+            copy_error_recovery (rq.tavl_link[0], new1, destroy);
             return NULL;
           }
     }
