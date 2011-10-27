@@ -54,19 +54,19 @@ int main() {
   /* traverse forward */
   for (int i=0;i<9;i++) {
     iter_elem = (unsigned int *)tavl_t_next(tree_iter);
-    printf("%d %d\n", *iter_elem, iter_elem);
-    printf("%d %d\n", *(unsigned int *)tavl_t_cur(tree_iter), tavl_t_cur(tree_iter));
+    //printf("%d %d\n", *iter_elem, iter_elem);
+    //printf("%d %d\n", *(unsigned int *)tavl_t_cur(tree_iter), tavl_t_cur(tree_iter));
   }
   
   /* traverse backward */
   for (int i=0;i<9;i++) {
     iter_elem = (unsigned int *)tavl_t_prev(tree_iter);
-    printf("%d %d\n", *iter_elem, iter_elem);
+    //printf("%d %d\n", *iter_elem, iter_elem);
   }
   
   /* find the last */
   iter_elem = (unsigned int *)tavl_t_last(tree_iter, tree);
-  printf("%d\n", *iter_elem);
+  //printf("%d\n", *iter_elem);
   
   /* delete a tree */
   tavl_destroy(tree, &uint_destroy);

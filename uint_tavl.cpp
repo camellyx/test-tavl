@@ -92,6 +92,10 @@ struct tavl_traverser uint_tavl::upper_bound(unsigned int upper) {
   }
 }
 
+void uint_tavl::erase(iterator erase_iter) {
+  unsigned int *erase_elem = erase_iter.
+}
+
 unsigned int& uint_tavl::operator [](const unsigned int &first) {
   unsigned int *probe_elem = new unsigned int[2];
   probe_elem[0] = first;
