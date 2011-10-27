@@ -93,7 +93,11 @@ struct tavl_traverser uint_tavl::upper_bound(unsigned int upper) {
 }
 
 void uint_tavl::erase(iterator erase_iter) {
-  unsigned int *erase_elem = erase_iter.
+  unsigned int *erase_elem = (unsigned int *)erase_iter.tavl_node;
+  if (erase_elem != NULL) {
+    tavl_delete(tree, (const void *)erase_elem);
+    delete[] erase_elem;
+  }
 }
 
 unsigned int& uint_tavl::operator [](const unsigned int &first) {

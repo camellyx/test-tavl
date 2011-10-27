@@ -21,25 +21,27 @@ int main() {
   tree = tavl_create (&comp_addr, NULL, &tavl_allocator_default);
   
   /* probe elements */
-  unsigned int *probe_elem = new unsigned int(1);
-  //printf("%d\n", *probe_elem);
+  unsigned int *probe_elem = new unsigned int[2];
+  printf("%d\n", probe_elem);
   unsigned int **ret = (unsigned int **)tavl_probe(tree, (void *)probe_elem);
-  //printf("%d\n", *ret);
+  printf("%d\n", *ret);
+  probe_elem = new unsigned int[2];
+  printf("%d\n", probe_elem);
   
   /* delete elements */
   unsigned int *del_elem = (unsigned int *)tavl_delete(tree, (const void *)probe_elem);
-  //printf("%d\n", del_elem);
+  printf("%d\n", del_elem == NULL);
   delete del_elem;
   
   /* add elements */
-  unsigned int *add_elem = new unsigned int(1);
+  unsigned int *add_elem = new unsigned int[2];
   assert( tavl_insert(tree, (void *)add_elem) == NULL);
   del_elem = (unsigned int *)tavl_delete(tree, (const void *)probe_elem);
   
   /* add lots of elements */
   for (int i=0;i<10;i++) {
     add_elem = new unsigned int(10-i);
-    printf("%d\n", *add_elem);
+    //printf("%d\n", *add_elem);
     assert( tavl_insert(tree, (void *)add_elem) == NULL);
   }
   
