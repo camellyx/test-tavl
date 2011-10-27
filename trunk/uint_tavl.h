@@ -35,6 +35,7 @@ public:
   iterator begin();
   iterator end();
   iterator upper_bound(unsigned int upper);
+  void erase(iterator erase_iter);
   unsigned int &operator [](const unsigned int &first);
 //private:
   struct tavl_table *tree;
