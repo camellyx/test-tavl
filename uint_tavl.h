@@ -18,18 +18,26 @@ void uint_destroy(void *ptr, void *) {
   delete[] dptr;
 }
 
+unsigned int first(const tavl_traverser &iter);
+unsigned int second(const tavl_traverser &iter);
+struct tavl_traverser operator ++(tavl_traverser &a, int);
+struct tavl_traverser operator --(tavl_traverser &a, int);
+int operator ==(const struct tavl_traverser& a, const struct tavl_traverser& b);
+int operator !=(const struct tavl_traverser& a, const struct tavl_traverser& b);
+
 class uint_tavl {
 public:
-	uint_tavl();
-	~uint_tavl();
-	
-	typedef tavl_traverser* iterator;
-	
-	iterator begin();
-	iterator end();
-	unsigned int &operator [](const unsigned int &first);
-private:
-	struct tavl_table *tree;
+  uint_tavl();
+  ~uint_tavl();
+  
+  typedef tavl_traverser iterator;
+  
+  iterator begin();
+  iterator end();
+  iterator upper_bound(unsigned int upper);
+  unsigned int &operator [](const unsigned int &first);
+//private:
+  struct tavl_table *tree;
 };
 
 #include "uint_tavl.cpp"
