@@ -19,7 +19,7 @@ void uint_destroy(void *ptr, void *) {
 }
 
 unsigned int first(const tavl_traverser &iter);
-unsigned int second(const tavl_traverser &iter);
+unsigned int &second(const tavl_traverser &iter);
 struct tavl_traverser operator ++(tavl_traverser &a, int);
 struct tavl_traverser operator --(tavl_traverser &a, int);
 int operator ==(const struct tavl_traverser& a, const struct tavl_traverser& b);
