@@ -19,5 +19,9 @@ int main() {
   for (int i=0;i<12;i++) {
     printf("%d %d\n", i, first(tavl.upper_bound(i)));
   }
+  tmp = tavl.upper_bound(5);
+  printf("%d %d\n", first(tmp), second(tmp));
+  second(tmp) = 1;
+  printf("%d %d\n", first(tmp), second(tmp));
   return 0;
 }

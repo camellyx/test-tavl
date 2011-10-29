@@ -1,4 +1,5 @@
-all:  test tavl
+all:
+	g++ trace_timer.cpp -o timer
 
 test: clean
 	g++ test_tavl1.cc -o test

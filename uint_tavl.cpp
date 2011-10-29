@@ -11,12 +11,12 @@ unsigned int first(const tavl_traverser &iter) {
   return 0;
 }
 
-unsigned int second(const tavl_traverser &iter) {
+unsigned int& second(const tavl_traverser &iter) {
   struct tavl_node *node = iter.tavl_node;
   if (node != NULL) {
-    return ((unsigned int *)node->tavl_data)[1];
+    return *(((unsigned int *)node->tavl_data)+1);
   }
-  return 0;
+  //return NULL;
 }
 
 struct tavl_traverser operator ++(tavl_traverser &a, int) {
