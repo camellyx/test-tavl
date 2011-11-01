@@ -209,7 +209,6 @@ void add_range(uint_tavl &range_cache, unsigned int start_addr, unsigned int end
     // we might have to merge them later.
     if((end_addr+1) == last_addr && iter_high!= range_cache.end())
         super_later_exists = true;
-
     // If the range you're trying to insert touches up a previous range..
     if(super_prev_exists) {
         // And it has the same flags you're trying to insert,
@@ -234,7 +233,6 @@ void add_range(uint_tavl &range_cache, unsigned int start_addr, unsigned int end
     // what we inserted, add it back in too.
     if((end_addr+1) < last_addr && end_addr != -1 && last_flags != flag)
         range_cache[end_addr+1] = last_flags;
-    
     // End merge fixup.
     if(super_later_exists && second(iter_high) == flag)
         range_cache.erase(iter_high);

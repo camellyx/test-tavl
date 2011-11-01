@@ -2,6 +2,52 @@
 #define _UINT_TAVL_CPP_
 #include "uint_tavl.h"
 
+/* perform dfs on tree */
+void uint_tavl::dfs() {
+  int n = 1, max = 1, null = 0;
+  queue<struct tavl_node *> q;
+  struct tavl_node *trav;
+  if (trav == NULL)
+    null++;
+  q.push(tree->tavl_root);
+  while (!q.empty()) {
+    trav = q.front();
+    q.pop();
+    if (trav == NULL) {
+      printf("n");
+      q.push(NULL);
+      q.push(NULL);
+      null++;
+    }
+    else {
+      if (trav->tavl_tag[0] == TAVL_CHILD)
+        q.push(trav->tavl_link[0]);
+      else {
+        q.push(NULL);
+        null++;
+      }
+      if (trav->tavl_tag[1] == TAVL_CHILD)
+        q.push(trav->tavl_link[1]);
+      else {
+        q.push(NULL);
+        null++;
+      }
+      printf("%x, %d", *(unsigned int *)trav->tavl_data, *((unsigned int *)trav->tavl_data+1));
+    }
+    n--;
+    if (n)
+      printf("|");
+    else {
+      printf("\n");
+      max *= 2;
+      n = max;
+      if (null == max)
+        return;
+    }
+  }
+  printf("dfs finished, node count: %d\n", (int)tree->tavl_count);
+}
+
 /* returns 0 if the iterator is pointed to NULL */
 unsigned int first(const tavl_traverser &iter) {
   struct tavl_node *node = iter.tavl_node;
@@ -44,7 +90,7 @@ uint_tavl::uint_tavl() {
 }
 
 uint_tavl::~uint_tavl() {
-  tavl_destroy (tree, &uint_destroy);
+  //tavl_destroy (tree, &uint_destroy);
 }
 
 struct tavl_traverser uint_tavl::begin() {
@@ -92,10 +138,10 @@ struct tavl_traverser uint_tavl::upper_bound(unsigned int upper) {
   }
 }
 
-void uint_tavl::erase(iterator erase_iter) {
-  unsigned int *erase_elem = (unsigned int *)erase_iter.tavl_node;
-  if (erase_elem != NULL) {
-    tavl_delete(tree, (const void *)erase_elem);
+void uint_tavl::erase(const iterator &erase_iter) {
+  struct tavl_node *erase_node = erase_iter.tavl_node;
+  if (erase_node != NULL) {
+    unsigned int *erase_elem = (unsigned int *)tavl_delete(tree, (const void *)erase_node);
     delete[] erase_elem;
   }
 }
