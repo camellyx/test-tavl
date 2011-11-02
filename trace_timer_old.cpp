@@ -1,6 +1,6 @@
 #include <iostream>
 #include <fstream>
-#include "uint_tavl.h"
+#include <map>
 #include <vector>
 #include <assert.h>
 #include <time.h>
@@ -36,7 +36,7 @@ struct pin_command {
     unsigned int opcode;
 };
 
-uint_tavl thread_to_rc[65536];
+map<unsigned int, unsigned int> thread_to_rc[65536];
 
 #ifdef FINALIZE_DEBUG
 // Bitmap of pointers. We will use these as bitmaps to compare against the ranges.
@@ -46,37 +46,37 @@ vector<int> list_of_threads;
 
 vector<pin_command> pin_commands;
 
-void print_thing(uint_tavl &range_cache)
+void print_thing(map<unsigned int, unsigned int> &range_cache)
 {
-    uint_tavl::iterator range_cache_iter;
+    map<unsigned int, unsigned int>::iterator range_cache_iter;
     cout << "Printing all ranges: " << endl;
     for(range_cache_iter = range_cache.begin();
             range_cache_iter != range_cache.end(); range_cache_iter++) {
-        cout << hex << first(range_cache_iter) << ": " << second(range_cache_iter) << endl;
+        cout << hex << range_cache_iter->first << ": " << range_cache_iter->second << endl;
     }
 }
 
-void verify_thing(uint_tavl &range_cache)
+void verify_thing(map<unsigned int, unsigned int> &range_cache)
 {
-    uint_tavl::iterator range_cache_iter;
+    map<unsigned int, unsigned int>::iterator range_cache_iter;
     unsigned int previous_address = 0;
     unsigned int previous_flag = 0;
     range_cache_iter = range_cache.begin();
-    previous_address = first(range_cache_iter);
-    previous_flag = second(range_cache_iter);
+    previous_address = range_cache_iter->first;
+    previous_flag = range_cache_iter->second;
     range_cache_iter++;
     while(range_cache_iter != range_cache.end()) {
-        if(second(range_cache_iter) == previous_flag) {
+        if(range_cache_iter->second == previous_flag) {
             fprintf(stdout, "ERROR! Two touching ranges have the same flag!\n");
             fprintf(stdout, "\tFirst addr: 0x%x First flag: 0x%x\n",
                         previous_address, previous_flag);
             fprintf(stdout, "\tSecond addr: 0x%x Second flag: 0x%x\n",
-                        first(range_cache_iter), second(range_cache_iter));
+                        range_cache_iter->first, range_cache_iter->second);
             print_thing(range_cache);
             exit(-1);
         }
-        previous_address = first(range_cache_iter);
-        previous_flag = second(range_cache_iter);
+        previous_address = range_cache_iter->first;
+        previous_flag = range_cache_iter->second;
         range_cache_iter++;
     }
 }
@@ -84,8 +84,8 @@ void verify_thing(uint_tavl &range_cache)
 #ifdef FINALIZE_DEBUG
 void validate(int thread_id)
 {
-    uint_tavl::iterator range_cache_iter;
-    uint_tavl::iterator next_entry;
+    map<unsigned int, unsigned int>::iterator range_cache_iter;
+    map<unsigned int, unsigned int>::iterator next_entry;
     unsigned int i;
 
     printf("Validating thread %d\n", thread_id);
@@ -99,32 +99,32 @@ void validate(int thread_id)
             end_addr = -1;
         }
         else
-            end_addr = first(next_entry) - 1;;
+            end_addr = next_entry->first - 1;;
 
-        for (i = first(range_cache_iter); i <= end_addr; i++) {
+        for (i = range_cache_iter->first; i <= end_addr; i++) {
             unsigned char bitmap_flag = bitmaps[thread_id][i>>2];
             bool correct = false;
             unsigned char bad_flag = 0;
             if (i%4 == 0) {
-                if ((bitmap_flag & 0x3) == second(range_cache_iter))
+                if ((bitmap_flag & 0x3) == range_cache_iter->second)
                     correct = true;
                 else
                     bad_flag = bitmap_flag & 0x3;
             }
             else if (i%4 == 1) {
-                if (((bitmap_flag & 0xc)>>2) == second(range_cache_iter))
+                if (((bitmap_flag & 0xc)>>2) == range_cache_iter->second)
                     correct = true;
                 else
                     bad_flag = (bitmap_flag & 0xc) >> 2;
             }
             else if (i%4 == 2) {
-                if (((bitmap_flag & 0x30)>>4) == second(range_cache_iter))
+                if (((bitmap_flag & 0x30)>>4) == range_cache_iter->second)
                     correct = true;
                 else
                     bad_flag = (bitmap_flag & 0x30) >> 4;
             }
             else if (i%4 == 3) {
-                if (((bitmap_flag & 0xc0)>>6) == second(range_cache_iter))
+                if (((bitmap_flag & 0xc0)>>6) == range_cache_iter->second)
                     correct = true;
                 else
                     bad_flag = (bitmap_flag & 0xc0) >> 6;
@@ -132,7 +132,7 @@ void validate(int thread_id)
 
             if (!correct) {
                 fprintf(stderr, "ERROR VALIDATING THREAD %d\n", thread_id);
-                fprintf(stderr, "Range cache entry says 0x%x-0x%x : %x\n", first(range_cache_iter), end_addr, second(range_cache_iter));
+                fprintf(stderr, "Range cache entry says 0x%x-0x%x : %x\n", range_cache_iter->first, end_addr, range_cache_iter->second);
                 fprintf(stderr, "Bitmap entry 0x%x says: %x\n", i, bad_flag);
                 fprintf(stderr, "Total bitmap is %x\n", bitmap_flag);
                 exit(-1);
@@ -146,13 +146,13 @@ void validate(int thread_id)
 }
 #endif
 
-bool check_range(uint_tavl &range_cache, unsigned int start_addr, unsigned int end_addr, unsigned int flag)
+bool check_range(map<unsigned int, unsigned int> &range_cache, unsigned int start_addr, unsigned int end_addr, unsigned int flag)
 {
-    uint_tavl::iterator iter;
+    map<unsigned int, unsigned int>::iterator iter;
     iter = range_cache.upper_bound(start_addr);
     iter--;
-    while(iter != range_cache.end() && first(iter) <= end_addr) {
-        if(second(iter) | flag)
+    while(iter != range_cache.end() && iter->first <= end_addr) {
+        if(iter->second | flag)
             return true;
         else
             iter++;
@@ -160,9 +160,9 @@ bool check_range(uint_tavl &range_cache, unsigned int start_addr, unsigned int e
     return false;
 }
 
-void add_range(uint_tavl &range_cache, unsigned int start_addr, unsigned int end_addr, unsigned int flag)
+void add_range(map<unsigned int, unsigned int> &range_cache, unsigned int start_addr, unsigned int end_addr, unsigned int flag)
 {
-    uint_tavl::iterator iter_low, iter_high, iter_low_temp, iter_high_temp;
+    map<unsigned int, unsigned int>::iterator iter_low, iter_high, iter_low_temp, iter_high_temp;
     unsigned int first_addr = 0;
     unsigned int last_addr = -1;
     int first_flags, last_flags;
@@ -174,25 +174,25 @@ void add_range(uint_tavl &range_cache, unsigned int start_addr, unsigned int end
     iter_low = range_cache.upper_bound(start_addr);
     iter_high_temp = iter_low;
     iter_low--;
-    first_flags = second(iter_low);
-    first_addr = first(iter_low);
+    first_flags = iter_low->second;
+    first_addr = iter_low->first;
 
     // If the range we're inserting touches another range at the start
     // we might have to merge them later.
     if(first_addr == start_addr && iter_low != range_cache.begin()) {
         iter_low_temp = iter_low;
         iter_low_temp--;
-        super_previous_flags = second(iter_low_temp);
+        super_previous_flags = iter_low_temp->second;
         super_prev_exists = true;
     }
 
     // Find "the range that includes our end point". This ends up in iter_high.
     // iter_high follows iter_high_temp by one node each time.
     last_flags = first_flags;
-    while(iter_high_temp != range_cache.end() && first(iter_high_temp) <= end_addr)
+    while(iter_high_temp != range_cache.end() && iter_high_temp->first <= end_addr)
     {
         iter_high = iter_high_temp;
-        last_flags = second(iter_high);
+        last_flags = iter_high->second;
         iter_high_temp++;
         range_cache.erase(iter_high);
     }
@@ -201,7 +201,7 @@ void add_range(uint_tavl &range_cache, unsigned int start_addr, unsigned int end
     // iter_high.
     iter_high = iter_high_temp;
     if(iter_high != range_cache.end())
-        last_addr = first(iter_high);
+        last_addr = iter_high->first;
     else // If we reach the end, then the last addr is the last available.
         last_addr = -1;
     
@@ -209,6 +209,7 @@ void add_range(uint_tavl &range_cache, unsigned int start_addr, unsigned int end
     // we might have to merge them later.
     if((end_addr+1) == last_addr && iter_high!= range_cache.end())
         super_later_exists = true;
+
     // If the range you're trying to insert touches up a previous range..
     if(super_prev_exists) {
         // And it has the same flags you're trying to insert,
@@ -233,12 +234,13 @@ void add_range(uint_tavl &range_cache, unsigned int start_addr, unsigned int end
     // what we inserted, add it back in too.
     if((end_addr+1) < last_addr && end_addr != -1 && last_flags != flag)
         range_cache[end_addr+1] = last_flags;
+    
     // End merge fixup.
-    if(super_later_exists && second(iter_high) == flag)
+    if(super_later_exists && iter_high->second == flag)
         range_cache.erase(iter_high);
 }
 
-inline void rm_range(uint_tavl &range_cache, unsigned int start_addr, unsigned int end_addr)
+inline void rm_range(map<unsigned int, unsigned int> &range_cache, unsigned int start_addr, unsigned int end_addr)
 {
     add_range(range_cache, start_addr, end_addr, NOT_WATCHED);
 }
@@ -251,132 +253,132 @@ inline unsigned int update_flag(unsigned int input_flag, unsigned int new_flag, 
         return input_flag & ~(new_flag);
 }
 
-void update_range(uint_tavl &range_cache, unsigned int start_addr, unsigned int end_addr, unsigned int flag, bool add)
+void update_range(map<unsigned int, unsigned int> &range_cache, unsigned int start_addr, unsigned int end_addr, unsigned int flag, bool add)
 {
-    uint_tavl::iterator iter_low, iter_high, go_iter, forward_iter, temp_iter, super_low_iter;
-	unsigned int temp_flag;
+    map<unsigned int, unsigned int>::iterator iter_low, iter_high, go_iter, forward_iter, temp_iter, super_low_iter;
+        unsigned int temp_flag;
 
     // Find the "range that includes our start point"
     iter_low = range_cache.upper_bound(start_addr);
     temp_iter = iter_low;
     iter_low--;
 
-	// We need to see what the starting range's new flag will be.
-	temp_flag = update_flag(second(iter_low), flag, add);
+        // We need to see what the starting range's new flag will be.
+        temp_flag = update_flag(iter_low->second, flag, add);
 
     // If our start address matches this range's start address,
     // we need to see if the range before this one needs merged in.
-	if(first(iter_low) == start_addr) {
-		if(temp_flag != second(iter_low)) {
-			// Start by making sure that if our update-end doesn't reach
-			// the end of this range, we split.
+        if(iter_low->first == start_addr) {
+                if(temp_flag != iter_low->second) {
+                        // Start by making sure that if our update-end doesn't reach
+                        // the end of this range, we split.
             if (temp_iter != range_cache.end()) {
-                if (first(temp_iter) > (end_addr+1)) {
-                    range_cache[end_addr+1] = second(iter_low);
+                if (temp_iter->first > (end_addr+1)) {
+                    range_cache[end_addr+1] = iter_low->second;
                 }
             }
             else if (end_addr != -1) {
-                range_cache[end_addr+1] = second(iter_low);
+                range_cache[end_addr+1] = iter_low->second;
             }
-			if (iter_low != range_cache.begin()) {
-				// If you're not first in the list, check for merge condition.
-				super_low_iter = iter_low;
-				super_low_iter--;
-				if (second(super_low_iter) == temp_flag) {
-					// If they're equal, the latter needn't exist.
-					range_cache.erase(iter_low);
-					iter_low = super_low_iter;
-				}
-				else {
-					// If they're not equal, then we should just update this range.
-					second(iter_low) = temp_flag;
-				}
-			}
-			else // If you're the first guy, just update your flag.
-				second(iter_low) = temp_flag;
-		}
-	}
-	else {
+                        if (iter_low != range_cache.begin()) {
+                                // If you're not first in the list, check for merge condition.
+                                super_low_iter = iter_low;
+                                super_low_iter--;
+                                if (super_low_iter->second == temp_flag) {
+                                        // If they're equal, the latter needn't exist.
+                                        range_cache.erase(iter_low);
+                                        iter_low = super_low_iter;
+                                }
+                                else {
+                                        // If they're not equal, then we should just update this range.
+                                        iter_low->second = temp_flag;
+                                }
+                        }
+                        else // If you're the first guy, just update your flag.
+                                iter_low->second = temp_flag;
+                }
+        }
+        else {
         // Instead, we need to see if this update will change the current range.
         // If so, we will need to split
-        if (temp_flag != second(iter_low)) {
-			// Start by making sure that if our update-end doesn't reach
-			// the end of this range, we split.
+        if (temp_flag != iter_low->second) {
+                        // Start by making sure that if our update-end doesn't reach
+                        // the end of this range, we split.
             if(temp_iter != range_cache.end()) {
-				if (first(temp_iter) > (end_addr+1)) {
-					range_cache[end_addr+1] = second(iter_low);
-				}
-			}
-			else if (end_addr != -1) {
-				range_cache[end_addr+1] = second(iter_low);
-			}
+                                if (temp_iter->first > (end_addr+1)) {
+                                        range_cache[end_addr+1] = iter_low->second;
+                                }
+                        }
+                        else if (end_addr != -1) {
+                                range_cache[end_addr+1] = iter_low->second;
+                        }
             // Insert the new flag into the newly-formed range.
             range_cache[start_addr] = temp_flag;
             // This will take us into the guy we just inserted
             iter_low++;
         }
     }
-	// OK, we're done with the beginning range.
+        // OK, we're done with the beginning range.
     
-	// Now our iter_low is the beginning address of the first guy to update
+        // Now our iter_low is the beginning address of the first guy to update
     // after our "start" range.
-	// temp_iter is a follower.
-	temp_iter = iter_low;
+        // temp_iter is a follower.
+        temp_iter = iter_low;
     iter_low++;
 
-    if (second(iter_low) == second(temp_iter)) {
+    if (iter_low->second == temp_iter->second) {
         range_cache.erase(iter_low);
         iter_low = temp_iter;
         iter_low++;
     }
 
-	// As long as we haven't gone past end_addr, we still need to update stuff.
-	if (iter_low != range_cache.end() && (first(iter_low) <= end_addr)) {
-		// This will go through ranges, merging and updating flags as it goes.
-		go_iter = forward_iter = iter_low;
-		while (go_iter != range_cache.end() && first(go_iter) <= end_addr) {
-			// Lookahead iterator to see if we've reached update-end.
-			forward_iter++;
-			temp_flag = update_flag(second(go_iter), flag, add);
+        // As long as we haven't gone past end_addr, we still need to update stuff.
+        if (iter_low != range_cache.end() && (iter_low->first <= end_addr)) {
+                // This will go through ranges, merging and updating flags as it goes.
+                go_iter = forward_iter = iter_low;
+                while (go_iter != range_cache.end() && go_iter->first <= end_addr) {
+                        // Lookahead iterator to see if we've reached update-end.
+                        forward_iter++;
+                        temp_flag = update_flag(go_iter->second, flag, add);
 
-			// Only need to do most work if we changed the flags at all.
-			if (temp_flag != second(go_iter)) {
-				// Start by making sure that if our update-end doesn't reach
-				// the end of this range, we split.
-				if (forward_iter != range_cache.end()) {
-					if (first(forward_iter) > (end_addr+1))
-						range_cache[end_addr+1] = second(go_iter);
-				}
-				else if(end_addr != -1) {
-					range_cache[(end_addr+1)] = second(go_iter);
-				}
+                        // Only need to do most work if we changed the flags at all.
+                        if (temp_flag != go_iter->second) {
+                                // Start by making sure that if our update-end doesn't reach
+                                // the end of this range, we split.
+                                if (forward_iter != range_cache.end()) {
+                                        if (forward_iter->first > (end_addr+1))
+                                                range_cache[end_addr+1] = go_iter->second;
+                                }
+                                else if(end_addr != -1) {
+                                        range_cache[(end_addr+1)] = go_iter->second;
+                                }
 
-				// If this range's new flag matches the previous range's..
-				if(temp_flag == second(temp_iter)) {
-					// Merge with the previous range.
-					range_cache.erase(go_iter);
-					go_iter = temp_iter;
-				}
-				else // Otherwise just update this range.
-					second(go_iter) = temp_flag;
-			}
-			temp_iter = go_iter;
-			go_iter = forward_iter;
-		}
-	}
+                                // If this range's new flag matches the previous range's..
+                                if(temp_flag == temp_iter->second) {
+                                        // Merge with the previous range.
+                                        range_cache.erase(go_iter);
+                                        go_iter = temp_iter;
+                                }
+                                else // Otherwise just update this range.
+                                        go_iter->second = temp_flag;
+                        }
+                        temp_iter = go_iter;
+                        go_iter = forward_iter;
+                }
+        }
     else {
         go_iter = iter_low;
     }
 
-	// temp_iter now contains the last range we updated.
-	// go_iter either contains rc.end() or one after the range we wanted to update.
+        // temp_iter now contains the last range we updated.
+        // go_iter either contains rc.end() or one after the range we wanted to update.
     iter_high = go_iter;
 
     if(iter_high != range_cache.end()) {
-        if((end_addr+1) == first(iter_high)) {
+        if((end_addr+1) == iter_high->first) {
             // If our end addr matches up with the following range's end addr,
             // we need to see if they should be merged together.
-            if(second(temp_iter) == second(iter_high)) {
+            if(temp_iter->second == iter_high->second) {
                 // If they're equal, the latter needn't exist.
                 range_cache.erase(iter_high);
             }
@@ -633,7 +635,7 @@ void run_input_file()
 
 int main(int argc, char*argv[])
 {
-    uint_tavl::iterator it,iterator_low,iterator_high;
+    map<unsigned int, unsigned int>::iterator it,iterator_low,iterator_high;
     struct timeval start_time, end_time, difference;
     unsigned int long us_to_walk;
     unsigned int long us_to_work_tree;
