@@ -1,5 +1,8 @@
 all:
 	g++ trace_timer.cpp -o timer
+	
+old:
+	g++ trace_timer_old.cpp -o timer
 
 test: clean
 	g++ test_tavl1.cc -o test
